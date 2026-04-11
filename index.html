@@ -316,13 +316,16 @@
         <h2>🎲 주사위 게임 (100칸 레이스)</h2>
         <p class="muted">2~4명 선택 후 먼저 100칸 도착하면 승리!</p>
 
-        <div class="token-setup" id="tokenSetup"></div>
-
-        <div id="playerSelect" class="grid2">
-          <button class="btn" onclick="startDiceGame(2)">2명</button>
-          <button class="btn" onclick="startDiceGame(3)">3명</button>
-          <button class="btn" onclick="startDiceGame(4)">4명</button>
-          <button class="btn pink" onclick="startDiceGame(2, true)">빠른 2명</button>
+        <div id="diceReadyArea" style="margin-top:10px;">
+          <div class="result-box" id="readyInfo">인원을 선택해줘! (기본 2명)</div>
+          <div id="playerSelect" class="grid2">
+            <button class="btn" onclick="setPlayerCount(2)">2명</button>
+            <button class="btn" onclick="setPlayerCount(3)">3명</button>
+            <button class="btn" onclick="setPlayerCount(4)">4명</button>
+            <button class="btn pink" onclick="toggleQuickMode()" id="quickBtn">빠른 모드: OFF</button>
+          </div>
+          <div class="token-setup" id="tokenSetup"></div>
+          <button class="btn green" onclick="startDiceFromReady()">시작하기 ▶</button>
         </div>
 
         <div id="diceGameArea" style="display:none; margin-top:10px;">
@@ -336,6 +339,7 @@
           </div>
           <div id="playersBoard"></div>
           <button id="diceRestartBtn" class="btn green" style="display:none;">다시 시작</button>
+          <button class="btn" style="background:#6c5ce7;" onclick="backToDiceReady()">준비화면으로</button>
         </div>
 
         <button class="btn home" onclick="showScreen('home')">홈으로</button>
@@ -514,6 +518,9 @@
     const playersBoard = document.getElementById('playersBoard');
     const boardGrid = document.getElementById('boardGrid');
     const startZone = document.getElementById('startZone');
+    const diceReadyArea = document.getElementById('diceReadyArea');
+    const readyInfo = document.getElementById('readyInfo');
+    const quickBtn = document.getElementById('quickBtn');
     const diceGameArea = document.getElementById('diceGameArea');
     const diceRestartBtn = document.getElementById('diceRestartBtn');
 
@@ -525,6 +532,8 @@
     let players = [];
     let current = 0;
     let gameOver = false;
+    let selectedPlayerCount = 2;
+    let quickMode = false;
 
     // 이벤트 타일: early small / mid medium / late big+mixed (요구사항 반영)
     const eventTiles = {
@@ -589,6 +598,28 @@
           reader.readAsDataURL(f);
         });
       }
+    }
+
+    function setPlayerCount(count) {
+      selectedPlayerCount = count;
+      readyInfo.textContent = `${count}명 선택됨${quickMode ? ' · 빠른모드 ON' : ''}`;
+    }
+
+    function toggleQuickMode() {
+      quickMode = !quickMode;
+      quickBtn.textContent = `빠른 모드: ${quickMode ? 'ON' : 'OFF'}`;
+      readyInfo.textContent = `${selectedPlayerCount}명 선택됨${quickMode ? ' · 빠른모드 ON' : ''}`;
+    }
+
+    function startDiceFromReady() {
+      startDiceGame(selectedPlayerCount, quickMode);
+      diceReadyArea.style.display = 'none';
+      diceGameArea.style.display = 'block';
+    }
+
+    function backToDiceReady() {
+      diceGameArea.style.display = 'none';
+      diceReadyArea.style.display = 'block';
     }
 
     function startDiceGame(count, quick = false) {
