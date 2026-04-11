@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>캠핑 미니게임 🎪</title>
+  <style>
+    :root {
+      --bg1: #fff7c2;
+      --bg2: #c9f9ff;
+      --card: #ffffff;
+      --text: #24324a;
+      --pink: #ff6fb5;
+      --blue: #4c9bff;
+      --green: #22b573;
+      --orange: #ff9f43;
+      --red: #ff5f6d;
+      --shadow: 0 8px 20px rgba(36, 50, 74, 0.15);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+      color: var(--text);
+      background: linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height: 100dvh;
+    }
+
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 14px 12px 24px;
+    }
+
+    .screen {
+      display: none;
+      animation: fadeIn .25s ease;
+    }
+    .screen.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    h1, h2, h3, p { margin: 0 0 10px; }
+    h1 { font-size: 32px; text-align: center; }
+    h2 { font-size: 26px; }
+    h3 { font-size: 20px; }
+    p, li { font-size: 18px; line-height: 1.45; }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 12px;
+      font-size: 23px;
+      font-weight: 800;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 6px 0 rgba(0,0,0,0.14);
+      margin-top: 10px;
+      cursor: pointer;
+      transition: transform .08s ease;
+    }
+    .btn:active { transform: translateY(2px); }
+    .btn.home { background: #7f8fa6; font-size: 20px; }
+    .btn.pink { background: var(--pink); }
+    .btn.green { background: var(--green); }
+    .btn.orange { background: var(--orange); }
+
+    .muted { color: #5f6c86; font-size: 16px; }
+
+    /* Game 1 */
+    .reaction-zone {
+      margin-top: 12px;
+      min-height: 180px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 900;
+      color: #fff;
+      background: #7f8c8d;
+      user-select: none;
+      touch-action: manipulation;
+      padding: 14px;
+    }
+    .reaction-zone.waiting { background: #f39c12; }
+    .reaction-zone.go { background: #2ecc71; }
+    .reaction-zone.early { background: #e74c3c; }
+
+    .result-box {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: #f2f8ff;
+      font-weight: 700;
+      font-size: 19px;
+    }
+
+    /* Game 2 */
+    .hint {
+      font-size: 34px;
+      text-align: center;
+      padding: 14px;
+      border-radius: 14px;
+      background: #fff5f9;
+      margin-bottom: 10px;
+    }
+    .choices .btn { font-size: 22px; }
+    .feedback {
+      min-height: 30px;
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Game 3 */
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .grid2 .btn { margin-top: 0; font-size: 20px; }
+
+    .turn-box {
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+      padding: 10px;
+      background: #eef9ff;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .player-row { margin-top: 10px; }
+    .player-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .track {
+      height: 16px;
+      border-radius: 999px;
+      background: #e9ecf5;
+      overflow: hidden;
+      position: relative;
+    }
+    .fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      transition: width .2s linear;
+    }
+    .p1 { background: #ff6b6b; }
+    .p2 { background: #4dabf7; }
+    .p3 { background: #51cf66; }
+    .p4 { background: #fcc419; }
+
+    .event-msg {
+      margin-top: 10px;
+      min-height: 56px;
+      border-radius: 12px;
+      background: #fff8e7;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+      padding: 8px;
+      animation: pop .2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pop {
+      from { transform: scale(.96); }
+      to { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- HOME -->
+    <section id="home" class="screen active">
+      <div class="card">
+        <h1>⛺ 캠핑 미니게임</h1>
+        <p style="text-align:center; font-size:20px; font-weight:700;">친구·가족과 신나게 놀아보자!</p>
+        <button class="btn pink" onclick="showScreen('reaction')">1. 반응속도 게임</button>
+        <button class="btn green" onclick="showScreen('animal')">2. 동물 맞추기</button>
+        <button class="btn orange" onclick="showScreen('dice')">3. 주사위 게임</button>
+      </div>
+    </section>
+
+    <!-- GAME 1 -->
+    <section id="reaction" class="screen">
+      <div class="card">
+        <h2>⚡ 반응속도 게임</h2>
+        <p class="muted">시작 누르고 기다리다가 <b>지금 탭!</b>이 뜨면 바로 탭!</p>
+        <button id="reactionStartBtn" class="btn">시작!</button>
+        <div id="reactionZone" class="reaction-zone">준비!</div>
+        <div id="reactionResult" class="result-box">기록: 아직 없음</div>
+        <button id="reactionRetryBtn" class="btn green" style="display:none;">다시하기</button>
+        <button class="btn home" onclick="showScreen('home')">홈으로</button>
+      </div>
+    </section>
+
+    <!-- GAME 2 -->
+    <section id="animal" class="screen">
+      <div class="card">
+        <h2>🐾 동물 맞추기</h2>
+        <p class="muted">총 5문제! 힌트를 보고 맞춰보자.</p>
+        <h3 id="animalProgress">문제 1 / 5</h3>
+        <div id="animalHint" class="hint">🐶 멍멍!</div>
+        <div id="animalChoices" class="choices"></div>
+        <div id="animalFeedback" class="feedback"></div>
+        <div id="animalScore" class="result-box">점수: 0</div>
+        <button id="animalRestartBtn" class="btn green" style="display:none;">처음부터</button>
+        <button class="btn home" onclick="showScreen('home')">홈으로</button>
+      </div>
+    </section>
+
+    <!-- GAME 3 -->
+    <section id="dice" class="screen">
+      <div class="card">
+        <h2>🎲 주사위 게임 (100칸 레이스)</h2>
+        <p class="muted">2~4명 선택 후 먼저 100칸 도착하면 승리!</p>
+
+        <div id="playerSelect" class="grid2">
+          <button class="btn" onclick="startDiceGame(2)">2명</button>
+          <button class="btn" onclick="startDiceGame(3)">3명</button>
+          <button class="btn" onclick="startDiceGame(4)">4명</button>
+          <button class="btn pink" onclick="startDiceGame(2, true)">빠른 2명</button>
+        </div>
+
+        <div id="diceGameArea" style="display:none; margin-top:10px;">
+          <div id="turnInfo" class="turn-box">플레이어 1 차례</div>
+          <button id="rollBtn" class="btn orange">주사위 굴리기 🎲</button>
+          <div id="diceValue" class="result-box">주사위: -</div>
+          <div id="eventMsg" class="event-msg">행운을 빌어! 🍀</div>
+          <div id="playersBoard"></div>
+          <button id="diceRestartBtn" class="btn green" style="display:none;">다시 시작</button>
+        </div>
+
+        <button class="btn home" onclick="showScreen('home')">홈으로</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // -------------------- 공용 화면 전환 --------------------
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // -------------------- GAME 1: 반응속도 --------------------
+    const reactionStartBtn = document.getElementById('reactionStartBtn');
+    const reactionRetryBtn = document.getElementById('reactionRetryBtn');
+    const reactionZone = document.getElementById('reactionZone');
+    const reactionResult = document.getElementById('reactionResult');
+
+    let reactionState = 'idle'; // idle | waiting | go | done
+    let reactionTimer = null;
+    let goTime = 0;
+    let bestReaction = Number(localStorage.getItem('bestReactionMs') || 0);
+
+    function renderReactionResult(message) {
+      const best = bestReaction ? bestReaction + 'ms' : '없음';
+      reactionResult.textContent = `${message} | 최고 기록: ${best}`;
+    }
+
+    function setupReactionRound() {
+      reactionState = 'waiting';
+      reactionRetryBtn.style.display = 'none';
+      reactionZone.className = 'reaction-zone waiting';
+      reactionZone.textContent = '기다리세요...';
+      renderReactionResult('진행 중');
+
+      const delay = 1000 + Math.floor(Math.random() * 3000); // 1~4초
+      reactionTimer = setTimeout(() => {
+        reactionState = 'go';
+        goTime = performance.now();
+        reactionZone.className = 'reaction-zone go';
+        reactionZone.textContent = '지금 탭!';
+      }, delay);
+    }
+
+    reactionStartBtn.addEventListener('click', setupReactionRound);
+    reactionRetryBtn.addEventListener('click', setupReactionRound);
+
+    reactionZone.addEventListener('click', () => {
+      if (reactionState === 'waiting') {
+        clearTimeout(reactionTimer);
+        reactionState = 'done';
+        reactionZone.className = 'reaction-zone early';
+        reactionZone.textContent = '너무 빨라요!';
+        renderReactionResult('실패 😅');
+        reactionRetryBtn.style.display = 'block';
+        return;
+      }
+
+      if (reactionState === 'go') {
+        const ms = Math.round(performance.now() - goTime);
+        reactionState = 'done';
+        reactionZone.className = 'reaction-zone';
+        reactionZone.style.background = '#34495e';
+        reactionZone.textContent = `${ms}ms`;
+
+        if (!bestReaction || ms < bestReaction) {
+          bestReaction = ms;
+          localStorage.setItem('bestReactionMs', String(bestReaction));
+          renderReactionResult(`대박! 현재 ${ms}ms (최고 기록 갱신!)`);
+        } else {
+          renderReactionResult(`현재 ${ms}ms`);
+        }
+        reactionRetryBtn.style.display = 'block';
+      }
+    });
+
+    renderReactionResult('기록: 아직 없음');
+
+    // -------------------- GAME 2: 동물 맞추기 --------------------
+    const animalData = [
+      { name: '강아지', hint: '🐶 멍멍! 사람과 친해요.' },
+      { name: '고양이', hint: '🐱 야옹! 생선을 좋아해요.' },
+      { name: '소', hint: '🐮 음메~ 우유를 줘요.' },
+      { name: '양', hint: '🐑 메에~ 털이 복슬복슬!' },
+      { name: '오리', hint: '🦆 꽥꽥! 물에서 수영해요.' }
+    ];
+
+    const animalProgress = document.getElementById('animalProgress');
+    const animalHint = document.getElementById('animalHint');
+    const animalChoices = document.getElementById('animalChoices');
+    const animalFeedback = document.getElementById('animalFeedback');
+    const animalScore = document.getElementById('animalScore');
+    const animalRestartBtn = document.getElementById('animalRestartBtn');
+
+    let aIndex = 0;
+    let aScore = 0;
+    let aQuestions = [];
+    let lockChoices = false;
+
+    function shuffle(arr) {
+      return [...arr].sort(() => Math.random() - 0.5);
+    }
+
+    function buildAnimalQuestions() {
+      aQuestions = shuffle(animalData).slice(0, 5).map(q => {
+        const wrong = shuffle(animalData.filter(x => x.name !== q.name)).slice(0, 2).map(x => x.name);
+        const options = shuffle([q.name, ...wrong]);
+        return { ...q, options };
+      });
+      aIndex = 0;
+      aScore = 0;
+      lockChoices = false;
+      animalRestartBtn.style.display = 'none';
+      animalFeedback.textContent = '';
+      renderAnimalQuestion();
+    }
+
+    function renderAnimalQuestion() {
+      const q = aQuestions[aIndex];
+      animalProgress.textContent = `문제 ${aIndex + 1} / 5`;
+      animalHint.textContent = q.hint;
+      animalScore.textContent = `점수: ${aScore}`;
+      animalChoices.innerHTML = '';
+
+      q.options.forEach(opt => {
+        const b = document.createElement('button');
+        b.className = 'btn';
+        b.textContent = opt;
+        b.onclick = () => answerAnimal(opt);
+        animalChoices.appendChild(b);
+      });
+    }
+
+    function answerAnimal(choice) {
+      if (lockChoices) return;
+      lockChoices = true;
+
+      const q = aQuestions[aIndex];
+      if (choice === q.name) {
+        aScore++;
+        animalFeedback.textContent = '정답! 🎉';
+        animalFeedback.style.color = '#16a085';
+      } else {
+        animalFeedback.textContent = `아쉬워요! 정답은 ${q.name}`;
+        animalFeedback.style.color = '#e74c3c';
+      }
+      animalScore.textContent = `점수: ${aScore}`;
+
+      setTimeout(() => {
+        aIndex++;
+        lockChoices = false;
+        if (aIndex >= 5) {
+          animalProgress.textContent = '게임 끝!';
+          animalHint.textContent = aScore >= 4 ? '대단해요! 🏆' : '다음엔 더 잘할 수 있어요! 💪';
+          animalChoices.innerHTML = '';
+          animalFeedback.textContent = `최종 점수: ${aScore} / 5`;
+          animalFeedback.style.color = '#2c3e50';
+          animalRestartBtn.style.display = 'block';
+          return;
+        }
+        animalFeedback.textContent = '';
+        renderAnimalQuestion();
+      }, 750);
+    }
+
+    animalRestartBtn.addEventListener('click', buildAnimalQuestions);
+    buildAnimalQuestions();
+
+    // -------------------- GAME 3: 주사위 100칸 레이스 --------------------
+    const turnInfo = document.getElementById('turnInfo');
+    const rollBtn = document.getElementById('rollBtn');
+    const diceValue = document.getElementById('diceValue');
+    const eventMsg = document.getElementById('eventMsg');
+    const playersBoard = document.getElementById('playersBoard');
+    const diceGameArea = document.getElementById('diceGameArea');
+    const diceRestartBtn = document.getElementById('diceRestartBtn');
+
+    let players = [];
+    let current = 0;
+    let gameOver = false;
+
+    // 이벤트 타일: early small / mid medium / late big+mixed (요구사항 반영)
+    const eventTiles = {
+      6: { move: 3, text: '+3칸!' },
+      12: { move: -3, text: '뒤로 3칸!' },
+      19: { move: 3, text: '+3칸!' },
+      27: { move: -3, text: '뒤로 3칸!' },
+
+      34: { move: 5, text: '+5칸!' },
+      41: { move: -5, text: '뒤로 5칸!' },
+      48: { extra: true, text: '한 번 더! 😆' },
+      57: { skipNext: true, text: '다음 턴 쉬기! 😵' },
+      66: { move: 5, text: '+5칸!' },
+
+      74: { move: -5, text: '함정! 뒤로 5칸!' },
+      78: { move: 10, text: '+10칸! 🚀' },     // +10 (1)
+      83: { move: -3, text: '삐끗! -3칸' },
+      88: { move: 10, text: '+10칸! 🔥' },     // +10 (2) (최대 2개)
+      92: { move: -5, text: '미끄덩! -5칸' },
+      95: { move: -10, text: '헉! -10칸 😱' }, // dramatic tile around 95
+      97: { move: 15, text: '+15칸 대박! 🌈' } // +15 (오직 1개)
+    };
+
+    function startDiceGame(count, quick = false) {
+      players = Array.from({ length: count }, (_, i) => ({
+        name: `플레이어 ${i + 1}`,
+        position: 0,
+        skipTurn: false
+      }));
+      current = 0;
+      gameOver = false;
+      diceGameArea.style.display = 'block';
+      diceRestartBtn.style.display = 'none';
+      eventMsg.textContent = quick ? '빠른 모드 시작! ⚡' : '게임 시작! 🎉';
+      renderPlayers();
+      renderTurn();
+      if (quick) {
+        // 빠른 모드는 출발 보너스 (수정하기 쉽게 단순 처리)
+        players.forEach(p => p.position = Math.floor(Math.random() * 8));
+        renderPlayers();
+      }
+    }
+
+    function renderPlayers() {
+      playersBoard.innerHTML = '';
+      players.forEach((p, i) => {
+        const row = document.createElement('div');
+        row.className = 'player-row';
+
+        const head = document.createElement('div');
+        head.className = 'player-head';
+        head.innerHTML = `<span>${p.name}${i === current ? ' ⭐' : ''}</span><span>${p.position} / 100 ${p.skipTurn ? '(다음턴 쉼)' : ''}</span>`;
+
+        const track = document.createElement('div');
+        track.className = 'track';
+        const fill = document.createElement('div');
+        fill.className = `fill p${i + 1}`;
+        fill.style.width = `${Math.min(100, p.position)}%`;
+        track.appendChild(fill);
+
+        row.appendChild(head);
+        row.appendChild(track);
+        playersBoard.appendChild(row);
+      });
+    }
+
+    function renderTurn() {
+      if (gameOver) return;
+      turnInfo.textContent = `${players[current].name} 차례!`;
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function moveStepByStep(player, steps) {
+      const dir = Math.sign(steps);
+      const total = Math.abs(steps);
+      for (let i = 0; i < total; i++) {
+        player.position += dir;
+        if (player.position < 0) player.position = 0;
+        renderPlayers();
+        await sleep(120);
+      }
+    }
+
+    async function handleRoll() {
+      if (gameOver) return;
+      rollBtn.disabled = true;
+
+      const p = players[current];
+
+      if (p.skipTurn) {
+        p.skipTurn = false;
+        eventMsg.textContent = `${p.name}은(는) 이번 턴 쉬어요 😴`;
+        nextTurn();
+        rollBtn.disabled = false;
+        return;
+      }
+
+      const dice = 1 + Math.floor(Math.random() * 6);
+      diceValue.textContent = `주사위: ${dice}`;
+      eventMsg.textContent = `${p.name} +${dice}칸 이동!`;
+
+      await moveStepByStep(p, dice);
+
+      // 도착 체크
+      if (p.position >= 100) {
+        p.position = 100;
+        renderPlayers();
+        gameOver = true;
+        turnInfo.textContent = `🏆 ${p.name} 우승!`;
+        eventMsg.textContent = '축하해요! 게임 끝!';
+        diceRestartBtn.style.display = 'block';
+        rollBtn.disabled = false;
+        return;
+      }
+
+      // 이벤트 타일 체크
+      const ev = eventTiles[p.position];
+      let extra = false;
+      if (ev) {
+        if (typeof ev.move === 'number' && ev.move !== 0) {
+          eventMsg.textContent = ev.text;
+          await moveStepByStep(p, ev.move);
+        } else {
+          eventMsg.textContent = ev.text;
+        }
+
+        if (ev.skipNext) {
+          p.skipTurn = true;
+        }
+        if (ev.extra) {
+          extra = true;
+        }
+
+        if (p.position >= 100) {
+          p.position = 100;
+          renderPlayers();
+          gameOver = true;
+          turnInfo.textContent = `🏆 ${p.name} 우승!`;
+          eventMsg.textContent = '대역전 우승! 🎉';
+          diceRestartBtn.style.display = 'block';
+          rollBtn.disabled = false;
+          return;
+        }
+      }
+
+      renderPlayers();
+
+      if (extra) {
+        turnInfo.textContent = `${p.name} 한 번 더!`;
+      } else {
+        nextTurn();
+      }
+
+      rollBtn.disabled = false;
+    }
+
+    function nextTurn() {
+      current = (current + 1) % players.length;
+      renderTurn();
+    }
+
+    rollBtn.addEventListener('click', handleRoll);
+    diceRestartBtn.addEventListener('click', () => startDiceGame(players.length || 2));
+  </script>
+</body>
+</html>
