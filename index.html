@@ -129,6 +129,50 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
+    .token-setup {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff7ef;
+      border-radius: 12px;
+      border: 1px solid #ffd7a8;
+    }
+    .token-row {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .token-preview {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      background: #fff;
+      border: 2px dashed #d5dff0;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      overflow: hidden;
+    }
+    .token-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .token-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    .token-controls select,
+    .token-controls input[type="file"] {
+      width: 100%;
+      font-size: 14px;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid #cfd9eb;
+      background: #fff;
+    }
     .grid2 .btn { margin-top: 0; font-size: 20px; }
 
     .turn-box {
@@ -212,7 +256,8 @@
     .tile.big { background: #ffe7ee; border-color: #ff9ec1; }
     .tile.now { outline: 3px solid #6c5ce7; }
     .tile-num { position: absolute; top: 1px; left: 3px; font-size: 8px; }
-    .tokens { font-size: 14px; line-height: 1; }
+    .tokens { font-size: 14px; line-height: 1; display:flex; gap:1px; align-items:center; justify-content:center; }
+    .tokens img { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
@@ -270,6 +315,8 @@
       <div class="card">
         <h2>🎲 주사위 게임 (100칸 레이스)</h2>
         <p class="muted">2~4명 선택 후 먼저 100칸 도착하면 승리!</p>
+
+        <div class="token-setup" id="tokenSetup"></div>
 
         <div id="playerSelect" class="grid2">
           <button class="btn" onclick="startDiceGame(2)">2명</button>
@@ -470,7 +517,10 @@
     const diceGameArea = document.getElementById('diceGameArea');
     const diceRestartBtn = document.getElementById('diceRestartBtn');
 
-    const playerTokens = ['🔴', '🔵', '🟢', '🟡'];
+    const tokenSetup = document.getElementById('tokenSetup');
+    const defaultAnimalTokens = ['🐯', '🐰', '🦊', '🐼'];
+    const allAnimalOptions = ['🐯','🐰','🦊','🐼','🐶','🐱','🐸','🦁','🐵','🐨'];
+    const playerTokenState = Array.from({ length: 4 }, (_, i) => ({ emoji: defaultAnimalTokens[i], image: '' }));
 
     let players = [];
     let current = 0;
@@ -498,6 +548,49 @@
       97: { move: 15, text: '+15칸 대박! 🌈' } // +15 (오직 1개)
     };
 
+    function getTokenHtml(idx) {
+      const t = playerTokenState[idx];
+      if (t.image) return `<img src="${t.image}" alt="말${idx+1}">`;
+      return `<span>${t.emoji}</span>`;
+    }
+
+    function renderTokenSetup() {
+      tokenSetup.innerHTML = '<h3 style="margin:0 0 8px;">말 캐릭터 설정 (동물/사진)</h3>';
+      for (let i = 0; i < 4; i++) {
+        const row = document.createElement('div');
+        row.className = 'token-row';
+        row.innerHTML = `
+          <div class="token-preview" id="tokenPreview${i}">${getTokenHtml(i)}</div>
+          <div class="token-controls">
+            <select id="emojiSelect${i}">${allAnimalOptions.map(e => `<option value="${e}" ${playerTokenState[i].emoji===e?'selected':''}>${e}</option>`).join('')}</select>
+            <input id="fileInput${i}" type="file" accept="image/*">
+          </div>
+        `;
+        tokenSetup.appendChild(row);
+
+        const sel = row.querySelector(`#emojiSelect${i}`);
+        const file = row.querySelector(`#fileInput${i}`);
+
+        sel.addEventListener('change', () => {
+          playerTokenState[i].emoji = sel.value;
+          if (!playerTokenState[i].image) renderTokenSetup();
+          renderPlayers();
+        });
+
+        file.addEventListener('change', () => {
+          const f = file.files && file.files[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            playerTokenState[i].image = String(reader.result || '');
+            renderTokenSetup();
+            renderPlayers();
+          };
+          reader.readAsDataURL(f);
+        });
+      }
+    }
+
     function startDiceGame(count, quick = false) {
       players = Array.from({ length: count }, (_, i) => ({
         name: `플레이어 ${i + 1}`,
@@ -522,10 +615,10 @@
       // 10x10 보드 (모바일에서도 한 화면에 보이도록 단순화)
       boardGrid.innerHTML = '';
       const startTokens = players
-        .map((p, idx) => p.position === 0 ? playerTokens[idx] : '')
+        .map((p, idx) => p.position === 0 ? getTokenHtml(idx) : '')
         .filter(Boolean)
-        .join('');
-      startZone.textContent = `출발(0): ${startTokens || '-'}`;
+        .join(' ');
+      startZone.innerHTML = `출발(0): ${startTokens || '-'}`;
 
       for (let n = 100; n >= 1; n--) {
         const tile = document.createElement('div');
@@ -544,10 +637,10 @@
         const tokens = document.createElement('div');
         tokens.className = 'tokens';
         const onTile = players
-          .map((p, idx) => p.position === n ? playerTokens[idx] : '')
+          .map((p, idx) => p.position === n ? getTokenHtml(idx) : '')
           .filter(Boolean)
           .join('');
-        tokens.textContent = onTile;
+        tokens.innerHTML = onTile;
 
         tile.appendChild(num);
         tile.appendChild(tokens);
@@ -674,6 +767,10 @@
       current = (current + 1) % players.length;
       renderTurn();
     }
+
+    // 초기 UI
+    renderTokenSetup();
+    renderPlayers();
 
     rollBtn.addEventListener('click', handleRoll);
     diceRestartBtn.addEventListener('click', () => startDiceGame(players.length || 2));
