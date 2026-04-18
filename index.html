@@ -313,8 +313,8 @@
     <!-- GAME 3 -->
     <section id="dice" class="screen">
       <div class="card">
-        <h2>🎲 주사위 게임 (100칸 레이스)</h2>
-        <p class="muted">2~4명 선택 후 먼저 100칸 도착하면 승리!</p>
+        <h2>🎲 주사위 게임 (사다리·미끄럼틀)</h2>
+        <p class="muted">2~4명 선택 후 먼저 100칸 도착하면 승리! 🪜🛝</p>
 
         <div id="diceReadyArea" style="margin-top:10px;">
           <div class="result-box" id="readyInfo">인원을 선택해줘! (기본 2명)</div>
@@ -535,26 +535,28 @@
     let selectedPlayerCount = 2;
     let quickMode = false;
 
-    // 이벤트 타일: early small / mid medium / late big+mixed (요구사항 반영)
-    const eventTiles = {
-      6: { move: 3, text: '+3칸!' },
-      12: { move: -3, text: '뒤로 3칸!' },
-      19: { move: 3, text: '+3칸!' },
-      27: { move: -3, text: '뒤로 3칸!' },
+    // 사다리/미끄럼틀 보드 (스네이크 앤 래더 스타일)
+    // key: 도착한 칸, to: 이동할 칸
+    const boardLinks = {
+      // 사다리(올라감)
+      4: 14,
+      9: 31,
+      21: 42,
+      28: 54,
+      36: 57,
+      51: 71,
+      65: 86,
+      79: 96,
 
-      34: { move: 5, text: '+5칸!' },
-      41: { move: -5, text: '뒤로 5칸!' },
-      48: { extra: true, text: '한 번 더! 😆' },
-      57: { skipNext: true, text: '다음 턴 쉬기! 😵' },
-      66: { move: 5, text: '+5칸!' },
-
-      74: { move: -5, text: '함정! 뒤로 5칸!' },
-      78: { move: 10, text: '+10칸! 🚀' },     // +10 (1)
-      83: { move: -3, text: '삐끗! -3칸' },
-      88: { move: 10, text: '+10칸! 🔥' },     // +10 (2) (최대 2개)
-      92: { move: -5, text: '미끄덩! -5칸' },
-      95: { move: -10, text: '헉! -10칸 😱' }, // dramatic tile around 95
-      97: { move: 15, text: '+15칸 대박! 🌈' } // +15 (오직 1개)
+      // 미끄럼틀(내려감)
+      17: 7,
+      33: 12,
+      48: 25,
+      63: 41,
+      74: 53,
+      89: 68,
+      95: 76,
+      99: 83
     };
 
     function getTokenHtml(idx) {
@@ -655,9 +657,11 @@
         const tile = document.createElement('div');
         tile.className = 'tile';
 
-        const ev = eventTiles[n];
-        if (ev) tile.classList.add('event');
-        if (ev && (ev.move === 10 || ev.move === 15 || ev.move === -10)) tile.classList.add('big');
+        const linkTo = boardLinks[n];
+        if (linkTo) {
+          tile.classList.add('event');
+          if (Math.abs(linkTo - n) >= 15) tile.classList.add('big');
+        }
 
         if (players[current] && players[current].position === n) tile.classList.add('now');
 
@@ -673,7 +677,15 @@
           .join('');
         tokens.innerHTML = onTile;
 
+        const linkMark = document.createElement('div');
+        linkMark.style.fontSize = '10px';
+        linkMark.style.lineHeight = '1';
+        if (linkTo) {
+          linkMark.textContent = linkTo > n ? '🪜↑' : '🛝↓';
+        }
+
         tile.appendChild(num);
+        tile.appendChild(linkMark);
         tile.appendChild(tokens);
         boardGrid.appendChild(tile);
       }
@@ -753,43 +765,31 @@
         return;
       }
 
-      // 이벤트 타일 체크
-      const ev = eventTiles[p.position];
-      let extra = false;
-      if (ev) {
-        if (typeof ev.move === 'number' && ev.move !== 0) {
-          eventMsg.textContent = ev.text;
-          await moveStepByStep(p, ev.move);
+      // 사다리/미끄럼틀 체크
+      const linkTo = boardLinks[p.position];
+      if (linkTo) {
+        const diff = linkTo - p.position;
+        if (diff > 0) {
+          eventMsg.textContent = `사다리 타고 +${diff}칸! 🪜`;
         } else {
-          eventMsg.textContent = ev.text;
+          eventMsg.textContent = `앗 미끄럼틀 ${diff}칸! 🛝`;
         }
+        await moveStepByStep(p, diff);
+      }
 
-        if (ev.skipNext) {
-          p.skipTurn = true;
-        }
-        if (ev.extra) {
-          extra = true;
-        }
-
-        if (p.position >= 100) {
-          p.position = 100;
-          renderPlayers();
-          gameOver = true;
-          turnInfo.textContent = `🏆 ${p.name} 우승!`;
-          eventMsg.textContent = '대역전 우승! 🎉';
-          diceRestartBtn.style.display = 'block';
-          rollBtn.disabled = false;
-          return;
-        }
+      if (p.position >= 100) {
+        p.position = 100;
+        renderPlayers();
+        gameOver = true;
+        turnInfo.textContent = `🏆 ${p.name} 우승!`;
+        eventMsg.textContent = '대역전 우승! 🎉';
+        diceRestartBtn.style.display = 'block';
+        rollBtn.disabled = false;
+        return;
       }
 
       renderPlayers();
-
-      if (extra) {
-        turnInfo.textContent = `${p.name} 한 번 더!`;
-      } else {
-        nextTurn();
-      }
+      nextTurn();
 
       rollBtn.disabled = false;
     }
