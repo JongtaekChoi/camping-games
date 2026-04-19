@@ -528,6 +528,7 @@
     const defaultAnimalTokens = ['🐯', '🐰', '🦊', '🐼'];
     const allAnimalOptions = ['🐯','🐰','🦊','🐼','🐶','🐱','🐸','🦁','🐵','🐨'];
     const playerTokenState = Array.from({ length: 4 }, (_, i) => ({ emoji: defaultAnimalTokens[i], image: '' }));
+    const diceFaces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
 
     let players = [];
     let current = 0;
@@ -729,8 +730,18 @@
         player.position += dir;
         if (player.position < 0) player.position = 0;
         renderPlayers();
-        await sleep(120);
+        await sleep(180); // 기존보다 천천히: 긴장감 업
       }
+    }
+
+    async function animateDiceRoll(finalDice) {
+      const loops = 10;
+      for (let i = 0; i < loops; i++) {
+        const v = 1 + Math.floor(Math.random() * 6);
+        diceValue.textContent = `주사위: ${v} ${diceFaces[v - 1]}`;
+        await sleep(75 + i * 8); // 점점 느려지며 멈추는 느낌
+      }
+      diceValue.textContent = `주사위: ${finalDice} ${diceFaces[finalDice - 1]}`;
     }
 
     async function handleRoll() {
@@ -748,7 +759,9 @@
       }
 
       const dice = 1 + Math.floor(Math.random() * 6);
-      diceValue.textContent = `주사위: ${dice}`;
+      eventMsg.textContent = '주사위를 굴리는 중... 🎲';
+      await animateDiceRoll(dice);
+      await sleep(180);
       eventMsg.textContent = `${p.name} +${dice}칸 이동!`;
 
       await moveStepByStep(p, dice);
@@ -774,6 +787,7 @@
         } else {
           eventMsg.textContent = `앗 미끄럼틀 ${diff}칸! 🛝`;
         }
+        await sleep(380);
         await moveStepByStep(p, diff);
       }
 
